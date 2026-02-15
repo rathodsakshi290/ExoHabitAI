@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from utils import predict_habitability
 import pandas as pd
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 
 @app.route("/", methods=["GET"])
@@ -20,23 +22,32 @@ def predict():
             return jsonify({"error": "No JSON data provided"}), 400
 
         result = predict_habitability(data)
+        
+        # Convert 0/1 to Habitable/Not Habitable
+        habitability_label = "Habitable" if result["prediction"] == 1 else "Not Habitable"
 
         return jsonify({
             "status": "success",
-            "prediction": result["habitable"],
-            "confidence": result["probability"]
+            "prediction": {
+                "habitability": habitability_label,
+                "score": result["probability"]
+            }
         })
 
     except ValueError as e:
+        print(f"Validation Error: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 400
 
     except Exception as e:
+        print(f"Unexpected Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
-            "message": "Internal server error"
+            "message": "Internal server error: " + str(e)
         }), 500
 
 
