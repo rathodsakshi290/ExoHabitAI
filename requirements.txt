@@ -4,8 +4,10 @@ matplotlib
 seaborn
 scikit-learn
 xgboost
-flask
+Flask
 joblib
 requests
 plotly
 gunicorn
+flask-cors==4.0.0
+     
