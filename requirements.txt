@@ -9,4 +9,6 @@ joblib
 requests
 plotly
 gunicorn
-streamlit
+streamlit==1.37.0
+altair<5
+
