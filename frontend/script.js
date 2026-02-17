@@ -70,13 +70,93 @@ function sendPredict(payload, outputId) {
         `<strong>Prediction:</strong> ${data.prediction}<br>
          <strong>Confidence:</strong> ${(data.confidence_score * 100).toFixed(2)}%`
       );
+
+      const contributionData = computeContributionFromInput(payload);
+
+      // FORM prediction
+      if (outputId === "formResult") {
+        const section = document.getElementById("formContributionSection");
+        section.classList.remove("d-none");
+
+        setTimeout(() => {
+          drawContributionChart(
+            "formContributionChart",
+            contributionData
+          );
+        }, 100);
+      }
+
+      // JSON prediction
+      if (outputId === "jsonResult") {
+        const section = document.getElementById("jsonContributionSection");
+        section.classList.remove("d-none");
+
+        setTimeout(() => {
+          drawContributionChart(
+            "jsonContributionChart",
+            contributionData
+          );
+          section.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
     })
     .catch(err => {
-      renderResult(outputId, `<span class="text-danger">Error occurred</span>`);
+      console.error(err);
+      alert("Prediction failed.");
     });
 }
 
+
+
 /* ---------- MULTI PLANET ---------- */
+
+
+/*Rank Chart Function*/
+let rankChart;
+
+function drawRankChart(labels, scores) {
+  const ctx = document.getElementById("rankChart").getContext("2d");
+
+  if (rankChart) rankChart.destroy();
+
+  rankChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Habitability Score",
+        data: scores,
+        backgroundColor: "rgba(30, 136, 229, 0.7)"
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1,
+          ticks: {
+            color: "#ccc"
+          },
+          grid: {
+            color: "rgba(255,255,255,0.1)"
+          }
+        },
+        x: {
+          ticks: {
+            color: "#ccc"
+          },
+          grid: {
+            color: "rgba(255,255,255,0.05)"
+          }
+        }
+      }
+    }
+
+  });
+}
+
 
 function addPlanetJson() {
   const container = document.getElementById("planetJsonContainer");
@@ -106,9 +186,24 @@ function addPlanetJson() {
 
 function rankPlanets() {
   const planets = [];
-  document.querySelectorAll(".planet-json").forEach(t => {
-    if (t.value.trim()) planets.push(JSON.parse(t.value));
-  });
+
+  try {
+    document.querySelectorAll(".planet-json").forEach(t => {
+      if (t.value.trim()) {
+        planets.push(JSON.parse(t.value));
+      }
+    });
+  } catch {
+    alert("Invalid JSON in one of the planet inputs.");
+    return;
+  }
+
+  if (planets.length === 0) {
+    alert("Please add at least one exoplanet.");
+    return;
+  }
+
+  console.log("Sending planets:", planets);
 
   fetch(`${API}/rank`, {
     method: "POST",
@@ -117,12 +212,135 @@ function rankPlanets() {
   })
     .then(res => res.json())
     .then(data => {
+
+      // ✅ Backend contract check
+      if (data.status !== "success" || !Array.isArray(data.ranked_exoplanets)) {
+        alert("Unexpected backend response.");
+        console.error("Response:", data);
+        return;
+      }
+
       let list = "<ol>";
-      data.ranked_exoplanets.forEach(p => {
-        list += `<li>Habitability Score: ${p.habitability_score}</li>`;
+      const scores = [];
+      const labels = [];
+
+      data.ranked_exoplanets.forEach((p, i) => {
+        const habitability = Number(p.habitability_score) || 0;
+
+        list += `
+          <li>
+            <strong>Planet ${i + 1}</strong><br>
+            Habitability Score: ${habitability.toFixed(4)}
+          </li>
+        `;
+
+        scores.push(habitability);
+        labels.push(`Planet ${i + 1}`);
       });
+
       list += "</ol>";
 
       renderResult("rankResult", list);
+
+      // Show chart section
+      const section = document.getElementById("rankSection");
+      section.classList.remove("d-none");
+
+      // Draw chart
+      setTimeout(() => {
+        drawRankChart(labels, scores);
+      }, 100);
+    })
+    .catch(err => {
+      console.error("Rank error:", err);
+      alert("Ranking failed.");
     });
 }
+
+let contributionCharts = {};
+
+function drawContributionChart(canvasId, contributions) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+
+  if (contributionCharts[canvasId]) {
+    contributionCharts[canvasId].destroy();
+  }
+
+  contributionCharts[canvasId] = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: Object.keys(contributions),
+      datasets: [{
+        label: "Impact on Habitability",
+        data: Object.values(contributions),
+        fill: true,
+        backgroundColor: "rgba(0, 200, 255, 0.25)",
+        borderColor: "#00c8ff",
+        pointBackgroundColor: "#00c8ff"
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          beginAtZero: true,
+          suggestedMax: 0.3,   // ⭐ important
+          ticks: {
+            stepSize: 0.05,
+            backdropColor: "transparent",
+            color: "#aaa"
+          },
+          pointLabels: {
+            color: "#ccc",
+            font: { size: 12 }
+          },
+          grid: {
+            color: "rgba(255,255,255,0.12)"
+          },
+          angleLines: {
+            color: "rgba(255,255,255,0.12)"
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: "#ccc"
+          }
+        }
+      }
+    }
+
+  });
+}
+
+
+function computeContributionFromInput(input) {
+  const raw = {
+    "Planet radius": Math.abs(input["Planet radius"] - 1),
+    "Planet mass": Math.abs(input["Planet mass"] - 1),
+
+    // smoother scaling (no spikes)
+    "Orbital period": Math.abs(input["Orbital period"] - 365) / 365,
+    "Semi-major axis": Math.abs(input["Semi-major axis"] - 1),
+
+    "Planet density": Math.abs(input["Planet density"] - 5.5),
+    "Host star temperature": Math.abs(input["Host star temperature"] - 288) / 288,
+    "Star luminosity": Math.abs(input["Star luminosity"] - 1),
+    "Star metallicity": Math.abs(input["Star metallicity"] - 0.02),
+
+    // categorical → fixed mild influence
+    "Star type": 0.3
+  };
+
+  const sum = Object.values(raw).reduce((a, b) => a + b, 0);
+
+  const normalized = {};
+  for (let key in raw) {
+    normalized[key] = +(raw[key] / sum).toFixed(3);
+  }
+
+  return normalized;
+}
+

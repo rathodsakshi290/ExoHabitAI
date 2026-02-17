@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>ExoHabitAI</title>
@@ -114,6 +115,24 @@
 
     <!-- FORM OUTPUT -->
     <div id="formResult" class="mt-4"></div>
+    <!-- FORM PARAMETER CONTRIBUTION -->
+    <div id="formContributionSection" class="card glass mt-4 p-3 d-none">
+      <h5 class="section-title text-center">Parameter Contribution (Form Input)</h5>
+      <div style="height: 300px;">
+        <canvas id="formContributionChart"></canvas>
+      </div>
+    </div>
+    <!-- FORM CONTRIBUTION -->
+    <div id="formContributionSection" class="card glass mt-4 p-3 d-none">
+      <h5 class="section-title text-center">Parameter Contribution (Form)</h5>
+      <div style="height: 300px;">
+        <canvas id="formContributionChart"></canvas>
+      </div>
+    </div>
+
+
+
+
 
     <!-- JSON INPUT -->
     <div class="card glass mt-5">
@@ -142,6 +161,25 @@
 
     <!-- JSON OUTPUT -->
     <div id="jsonResult" class="mt-4"></div>
+    <!-- JSON CONTRIBUTION -->
+    <div id="jsonContributionSection" class="card glass mt-4 p-3 d-none">
+      <h5 class="section-title text-center">Parameter Contribution (JSON)</h5>
+      <div style="height: 300px;">
+        <canvas id="jsonContributionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- JSON PARAMETER CONTRIBUTION -->
+    <div id="jsonContributionSection" class="card glass mt-4 p-3 d-none">
+      <h5 class="section-title text-center">Parameter Contribution (JSON Input)</h5>
+      <div style="height: 300px;">
+        <canvas id="jsonContributionChart"></canvas>
+      </div>
+    </div>
+
+
+
+
 
     <!-- MULTI PLANET -->
     <h3 class="section-heading mt-5 mb-3">Multi-Planet Ranking</h3>
@@ -157,11 +195,21 @@
       </button>
     </div>
 
-    <!-- RANK OUTPUT -->
+    <!-- TEXT OUTPUT (REQUIRED) -->
     <div id="rankResult" class="mt-4"></div>
 
-  </div>
+    <!-- GRAPH OUTPUT -->
+    <div id="rankSection" class="card glass mt-4 p-3 d-none">
+      <h5 class="section-title text-center">Habitability Score Comparison</h5>
+      <div style="height: 300px;">
+        <canvas id="rankChart"></canvas>
+      </div>
+    </div>
 
+
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
+
 </html>
