@@ -2,92 +2,107 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>ExoHabitAI</title>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- optional: silence favicon warning -->
   <link rel="icon" href="data:,">
 </head>
 
 <body>
+  <!-- Cosmic Starfield Background -->
+<canvas id="starfield"></canvas>
+
+  <!-- Animated Stars -->
   <div class="stars"></div>
 
-  <div class="container py-5">
+  <!-- HERO SECTION -->
+<section class="hero-section">
+  <div class="hero-content">
+    <h1 class="hero-title neon-text">ExoHabitAI</h1>
 
-    <!-- HERO -->
-    <div class="text-center mb-5">
-      <h1 class="hero-title">ExoHabitAI</h1>
-      <p class="hero-subtitle">
-        AI-powered Exoplanet Habitability Prediction & Ranking
-      </p>
-    </div>
+    <p class="hero-tagline">
+      AI-Powered Exoplanet Habitability Prediction & Ranking
+    </p>
 
-    <!-- SINGLE PLANET -->
-    <h3 class="section-heading mb-3">Single Planet Prediction</h3>
+    <button class="explore-btn" id="exploreBtn">
+      EXPLORE
+    </button>
+  </div>
 
-    <div class="row g-4">
+  <div class="scroll-hint">
+    <span>SCROLL</span>
+    <div class="arrow">↓</div>
+  </div>
+</section>
 
-      <!-- Planetary -->
+
+    <!-- ================= SINGLE PLANET ================= -->
+    <h3 class="section-heading">Single Planet <span class="glow-text-cyan">Prediction</span></h3>
+
+    <div class="row g-4 mt-2">
+
+      <!-- Planetary Parameters -->
       <div class="col-md-6">
-        <div class="card glass">
+        <div class="card glass reveal">
           <div class="card-body">
-            <h5 class="section-title">Planetary Parameters</h5>
+            <h5 class="section-title">PLANETARY PARAMETERS</h5>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Planet Radius (Earth radii)</label>
-                <input id="radius" class="form-control" placeholder="e.g. 1.2">
+                <input id="radius" class="form-control" placeholder="1.2">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Planet Mass (Earth masses)</label>
-                <input id="mass" class="form-control" placeholder="e.g. 2.3">
+                <input id="mass" class="form-control" placeholder="2.3">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Orbital Period (days)</label>
-                <input id="period" class="form-control" placeholder="e.g. 365">
+                <input id="period" class="form-control" placeholder="365">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Semi-major Axis (AU)</label>
-                <input id="axis" class="form-control" placeholder="e.g. 1.0">
+                <input id="axis" class="form-control" placeholder="1.0">
               </div>
-
               <div class="col-md-12">
                 <label class="form-label">Planet Density (g/cm³)</label>
-                <input id="density" class="form-control" placeholder="e.g. 5.5">
+                <input id="density" class="form-control" placeholder="5.5">
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Stellar -->
+      <!-- Stellar Parameters -->
       <div class="col-md-6">
-        <div class="card glass">
+        <div class="card glass reveal">
           <div class="card-body">
-            <h5 class="section-title">Stellar Parameters</h5>
+            <h5 class="section-title">STELLAR PARAMETERS</h5>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Host Star Temperature (K)</label>
-                <input id="temp" class="form-control" placeholder="e.g. 5780">
+                <input id="temp" class="form-control" placeholder="5780">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Star Luminosity</label>
-                <input id="lum" class="form-control" placeholder="e.g. 1.0">
+                <input id="lum" class="form-control" placeholder="1.0">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Star Metallicity</label>
-                <input id="met" class="form-control" placeholder="e.g. 0.02">
+                <input id="met" class="form-control" placeholder="0.02">
               </div>
-
               <div class="col-md-6">
                 <label class="form-label">Star Type</label>
                 <select id="type" class="form-select">
@@ -106,110 +121,75 @@
 
     </div>
 
-    <!-- FORM PREDICT BUTTON -->
     <div class="text-center mt-4">
-      <button class="btn btn-primary" onclick="predictFromForm()">
+      <button class="btn btn-primary btn-glow" onclick="predictFromForm()">
         Predict Habitability
       </button>
     </div>
+    <div>
 
-    <!-- FORM OUTPUT -->
+
+
+
+      
+    </div>
+
     <div id="formResult" class="mt-4"></div>
-    <!-- FORM PARAMETER CONTRIBUTION -->
+
     <div id="formContributionSection" class="card glass mt-4 p-3 d-none">
-      <h5 class="section-title text-center">Parameter Contribution (Form Input)</h5>
-      <div style="height: 300px;">
-        <canvas id="formContributionChart"></canvas>
-      </div>
-    </div>
-    <!-- FORM CONTRIBUTION -->
-    <div id="formContributionSection" class="card glass mt-4 p-3 d-none">
-      <h5 class="section-title text-center">Parameter Contribution (Form)</h5>
-      <div style="height: 300px;">
+      <h5 class="section-title text-center">Parameter Contribution</h5>
+      <div style="height:300px">
         <canvas id="formContributionChart"></canvas>
       </div>
     </div>
 
+    <!-- ================= JSON INPUT ================= -->
+    <h3 class="section-heading mt-5"><span class="glow-text-cyan">JSON</span> Input</h3>
 
-
-
-
-    <!-- JSON INPUT -->
-    <div class="card glass mt-5">
+    <div class="card glass reveal mt-3">
       <div class="card-body">
-        <h5 class="section-title">JSON Input</h5>
-
-        <textarea id="jsonInput" class="form-control" rows="6" placeholder='{
-  "Planet radius": 1.1,
-  "Planet mass": 1.9,
-  "Orbital period": 365,
-  "Semi-major axis": 1.0,
-  "Planet density": 5.4,
-  "Host star temperature": 288,
-  "Star luminosity": 1.0,
-  "Star metallicity": 0.02,
-  "Star type": "G"
-}'></textarea>
-
+        <textarea id="jsonInput" class="form-control code-area" rows="6"></textarea>
         <div class="text-center mt-3">
-          <button class="btn btn-secondary" onclick="predictFromJSON()">
+          <button class="btn btn-secondary btn-glow" onclick="predictFromJSON()">
             Predict from JSON
           </button>
         </div>
       </div>
     </div>
 
-    <!-- JSON OUTPUT -->
     <div id="jsonResult" class="mt-4"></div>
-    <!-- JSON CONTRIBUTION -->
+
     <div id="jsonContributionSection" class="card glass mt-4 p-3 d-none">
-      <h5 class="section-title text-center">Parameter Contribution (JSON)</h5>
-      <div style="height: 300px;">
+      <h5 class="section-title text-center">Parameter Contribution</h5>
+      <div style="height:300px">
         <canvas id="jsonContributionChart"></canvas>
       </div>
     </div>
 
-    <!-- JSON PARAMETER CONTRIBUTION -->
-    <div id="jsonContributionSection" class="card glass mt-4 p-3 d-none">
-      <h5 class="section-title text-center">Parameter Contribution (JSON Input)</h5>
-      <div style="height: 300px;">
-        <canvas id="jsonContributionChart"></canvas>
-      </div>
-    </div>
-
-
-
-
-
-    <!-- MULTI PLANET -->
-    <h3 class="section-heading mt-5 mb-3">Multi-Planet Ranking</h3>
+    <!-- ================= MULTI PLANET ================= -->
+    <h3 class="section-heading mt-5">Multi-Planet<span class="glow-text-cyan"> Ranking</span></h3>
 
     <div id="planetJsonContainer"></div>
 
     <div class="text-center mt-3">
-      <button class="btn btn-outline-light" onclick="addPlanetJson()">
-        Add Exoplanet (JSON)
-      </button>
-      <button class="btn btn-success ms-2" onclick="rankPlanets()">
-        Rank Exoplanets
-      </button>
+      <button class="btn btn-outline-light btn-glow" onclick="addPlanetJson()">Add Exoplanet</button>
+      <button class="btn btn-success btn-glow ms-2" onclick="rankPlanets()">Rank Exoplanets</button>
     </div>
 
-    <!-- TEXT OUTPUT (REQUIRED) -->
     <div id="rankResult" class="mt-4"></div>
 
-    <!-- GRAPH OUTPUT -->
     <div id="rankSection" class="card glass mt-4 p-3 d-none">
       <h5 class="section-title text-center">Habitability Score Comparison</h5>
-      <div style="height: 300px;">
+      <div style="height:300px">
         <canvas id="rankChart"></canvas>
       </div>
     </div>
 
-
   </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
-</body>
+  <script src="starfield.js"></script>
 
+</body>
 </html>

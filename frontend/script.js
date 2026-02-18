@@ -65,11 +65,12 @@ function sendPredict(payload, outputId) {
   })
     .then(res => res.json())
     .then(data => {
-      renderResult(
+      renderPredictionUI(
         outputId,
-        `<strong>Prediction:</strong> ${data.prediction}<br>
-         <strong>Confidence:</strong> ${(data.confidence_score * 100).toFixed(2)}%`
+        data.prediction,
+        (data.confidence_score * 100).toFixed(0)
       );
+
 
       const contributionData = computeContributionFromInput(payload);
 
@@ -123,40 +124,64 @@ function drawRankChart(labels, scores) {
     type: "bar",
     data: {
       labels,
-      datasets: [{
-        label: "Habitability Score",
-        data: scores,
-        backgroundColor: "rgba(30, 136, 229, 0.7)"
-      }]
+      datasets: [
+        {
+          data: scores,
+          backgroundColor: "#2de2ff",
+          borderRadius: 10,
+          barThickness: 60
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+
       scales: {
         y: {
           beginAtZero: true,
-          max: 1,
+          max: 1, /* IMPORTANT */
           ticks: {
-            color: "#ccc"
+            stepSize: 0.25,
+            color: "rgba(200,220,255,0.6)"
           },
           grid: {
-            color: "rgba(255,255,255,0.1)"
+            color: "rgba(255,255,255,0.08)"
           }
         },
         x: {
           ticks: {
-            color: "#ccc"
+            color: "rgba(200,220,255,0.7)"
           },
           grid: {
-            color: "rgba(255,255,255,0.05)"
+            display: false
           }
         }
+      },
+
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(15,18,30,0.95)",
+          borderColor: "#2de2ff",
+          borderWidth: 1,
+          titleColor: "#ffffff",
+          bodyColor: "#2de2ff",
+          displayColors: false,
+          callbacks: {
+            label: (ctx) =>
+              "Habitability score : " + ctx.raw.toFixed(4)
+          }
+        }
+      },
+
+      animation: {
+        duration: 800,
+        easing: "easeOutQuart"
       }
     }
-
   });
 }
-
 
 function addPlanetJson() {
   const container = document.getElementById("planetJsonContainer");
@@ -225,18 +250,27 @@ function rankPlanets() {
       const labels = [];
 
       data.ranked_exoplanets.forEach((p, i) => {
-        const habitability = Number(p.habitability_score) || 0;
+  const habitability = Number(p.habitability_score) || 0;
+  const barWidth = Math.min(habitability * 100, 100);
 
-        list += `
-          <li>
-            <strong>Planet ${i + 1}</strong><br>
-            Habitability Score: ${habitability.toFixed(4)}
-          </li>
-        `;
+  list += `
+    <li>
+      <strong>#${i + 1} Planet ${i + 1}</strong>
 
-        scores.push(habitability);
-        labels.push(`Planet ${i + 1}`);
-      });
+      <div class="rank-bar">
+        <div class="rank-bar-fill" style="width:${barWidth}%"></div>
+      </div>
+
+      <div class="rank-score">
+        ${(habitability * 100).toFixed(0)}%
+      </div>
+    </li>
+  `;
+
+  scores.push(habitability);
+  labels.push(`Planet ${i + 1}`);
+});
+
 
       list += "</ol>";
 
@@ -270,50 +304,87 @@ function drawContributionChart(canvasId, contributions) {
     type: "radar",
     data: {
       labels: Object.keys(contributions),
-      datasets: [{
-        label: "Impact on Habitability",
-        data: Object.values(contributions),
-        fill: true,
-        backgroundColor: "rgba(0, 200, 255, 0.25)",
-        borderColor: "#00c8ff",
-        pointBackgroundColor: "#00c8ff"
-      }]
+      datasets: [
+        {
+          data: Object.values(contributions),
+
+          /* Line */
+          borderColor: "#2de2ff",
+          borderWidth: 2,
+
+          /* Fill */
+          backgroundColor: "rgba(45,226,255,0.18)",
+
+          /* Points */
+          pointRadius: 3,
+          pointHoverRadius: 7,
+          pointBackgroundColor: "#2de2ff",
+          pointBorderColor: "#0b0f1c",
+          pointHoverBorderWidth: 2
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+
+      /* 🔥 IMPORTANT PART */
+      interaction: {
+        mode: "nearest",
+        intersect: false
+      },
+
       scales: {
         r: {
           beginAtZero: true,
-          suggestedMax: 0.3,   // ⭐ important
-          ticks: {
-            stepSize: 0.05,
-            backdropColor: "transparent",
-            color: "#aaa"
-          },
-          pointLabels: {
-            color: "#ccc",
-            font: { size: 12 }
-          },
+
           grid: {
             color: "rgba(255,255,255,0.12)"
           },
           angleLines: {
             color: "rgba(255,255,255,0.12)"
+          },
+          ticks: {
+            display: false
+          },
+          pointLabels: {
+            color: "rgba(220,240,255,0.7)",
+            font: { size: 11 }
           }
         }
       },
+
       plugins: {
-        legend: {
-          labels: {
-            color: "#ccc"
+        legend: { display: false },
+
+        tooltip: {
+          enabled: true,
+          backgroundColor: "rgba(15,18,30,0.95)",
+          borderColor: "#2de2ff",
+          borderWidth: 1,
+          titleColor: "#ffffff",
+          bodyColor: "#2de2ff",
+          padding: 12,
+          cornerRadius: 10,
+          displayColors: false,
+
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) =>
+              "value : " + Number(item.raw).toFixed(3)
           }
         }
+      },
+
+      animation: {
+        duration: 700,
+        easing: "easeOutQuart"
       }
     }
-
   });
 }
+
+
 
 
 function computeContributionFromInput(input) {
@@ -343,4 +414,51 @@ function computeContributionFromInput(input) {
 
   return normalized;
 }
+// Smooth scroll to Single Planet Prediction
+const exploreBtn = document.getElementById("exploreBtn");
+const scrollHint = document.querySelector(".scroll-hint");
 
+function scrollToPrediction() {
+  const target = document.querySelector(".section-heading");
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+exploreBtn?.addEventListener("click", scrollToPrediction);
+scrollHint?.addEventListener("click", scrollToPrediction);
+
+// Optional: scroll on mouse wheel from hero
+window.addEventListener("wheel", (e) => {
+  if (window.scrollY < 50 && e.deltaY > 0) {
+    scrollToPrediction();
+  }
+}, { once: true });
+function renderPredictionUI(containerId, prediction, confidence) {
+  const container = document.getElementById(containerId);
+
+  const isHabitable = prediction.toLowerCase().includes("habitable") &&
+    !prediction.toLowerCase().includes("not");
+
+  container.innerHTML = `
+    <div class="output-box">
+      <div class="prediction-strip">
+        <div class="prediction-left">
+          <div class="prediction-label">PREDICTION</div>
+          <div class="prediction-pill ${isHabitable ? "habitable" : "not-habitable"}">
+            ${isHabitable ? "✔" : "⛔"} ${prediction}
+          </div>
+        </div>
+
+        <div class="confidence-box">
+          <div class="confidence-label">
+            CONFIDENCE: ${confidence}%
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width:${confidence}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
