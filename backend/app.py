@@ -1,5 +1,6 @@
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import numpy as np
 import pandas as pd
 import os
@@ -57,6 +58,7 @@ print("Starting Flask app...")
 # Flask app
 # ==============================
 app = Flask(__name__)
+CORS(app)
 
 # Load trained pipeline once
 model = load_model()
@@ -64,59 +66,116 @@ model = load_model()
 # ==============================
 # Prediction endpoint
 # ==============================
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
 
-    if not data:
-        return jsonify({"error": "No input data provided"}), 400
+    # Main inputs from frontend
+    radius = float(data['radius'])
+    mass = float(data['mass'])
+    temp = float(data['temperature'])
+    distance = float(data['distance'])
+
+    # ---- DERIVED SCIENTIFIC FEATURES ----
+    eqt = 288 * (temp/5778)**0.25 / (distance**0.5)
+    density = mass / (radius**3 + 1e-6)
+    period = 365 * (distance**1.5)
+
+    star_radius = 1.0
+    star_mass = 1.0
+    metallicity = 0.0
+    luminosity = (temp/5778)**4
+
+    # ---- BUILD FULL FEATURE LIST (TRAINING ORDER) ----
+    features = [[
+        radius, period, distance, eqt, temp,
+        star_radius, star_mass, metallicity, 2020, 1,
+        mass, density, luminosity,
+
+        # normalized placeholders
+        0.5,0.5,0.5,0.5,0.5,0.5,0.5,
+
+        # engineered scores
+        0.7,0.7,0.7,0.7,
+
+        0.5,0.6,0.6,0.6
+    ]]
+
+    prediction = model.predict(features)[0]
 
     try:
-        input_row = []
+        score = float(model.predict_proba(features)[0][1])
+    except:
+        score = float(prediction)
 
-        # Build full feature vector (28 features)
-        for feature in FEATURE_NAMES:
-            input_row.append(data.get(feature, 0))
+    status = "Habitable" if prediction==1 else "Not Habitable"
 
-        features = np.array([input_row])
+    return jsonify({
+        "score": round(score,2),
+        "status": status
+    })
 
-        prediction = model.predict(features)[0]
-        probability = model.predict_proba(features)[0][1]
-
-        return jsonify({
-            "habitable": int(prediction),
-            "confidence": round(float(probability), 4)
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
 @app.route("/rank", methods=["GET"])
 def rank_planets():
     try:
-        # Check if ranked CSV exists
-        if not os.path.exists(RANKED_FILE_PATH):
-            return jsonify({"error": "Habitability ranked file not found"}), 404
+        path = os.path.join(BASE_DIR,"data","processed","habitability_ranked.csv")
 
-        # Read CSV
-        df = pd.read_csv(RANKED_FILE_PATH)
+        if not os.path.exists(path):
+            return jsonify({"error":"Ranking file not found"}),404
 
-        # Take top 10 most habitable planets
-        top_planets = df.head(10).copy()
-        top_planets["rank"] = range(1, len(top_planets) + 1)
+        df = pd.read_csv(path)
 
+        # ensure probability column exists
+        if "habitability_probability" not in df.columns:
+            return jsonify({"error":"Column missing"}),500
 
-        # Convert to JSON
-        result = top_planets[["rank", "habitability_probability"]].to_dict(orient="records")
+        top = df.sort_values(
+            "habitability_probability",
+            ascending=False
+        ).head(10)
 
+        result = top.to_dict(orient="records")
 
         return jsonify({
-            "count": len(result),
-            "top_habitable_planets": result
+            "count":len(result),
+            "top_habitable_planets":result
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
+
+@app.route("/importance", methods=["GET"])
+def importance():
+
+    try:
+        model = load_model()
+        clf = model.named_steps["classifier"]
+
+        importance = abs(clf.coef_[0]).tolist()
+
+        return jsonify({
+            "features": FEATURE_NAMES,
+            "importance": importance
+        })
+
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+
+@app.route("/upload_rank", methods=["POST"])
+def upload_rank():
+
+    file = request.files["file"]
+    df = pd.read_csv(file)
+
+    probs = model.predict_proba(df[FEATURE_NAMES])[:,1]
+    df["habitability_probability"] = probs
+
+    df.sort_values("habitability_probability", ascending=False, inplace=True)
+
+    save_path = os.path.join(BASE_DIR,"data","processed","uploaded_ranked.csv")
+    df.to_csv(save_path, index=False)
+
+    return jsonify({"status":"saved","path":save_path})
 
 
 
