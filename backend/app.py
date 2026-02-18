@@ -4,75 +4,56 @@ import joblib
 import numpy as np
 from utils import validate_input
 
-# Initialize Flask app
 app = Flask(__name__)
-
-# 🔴 IMPORTANT: Enable CORS
 CORS(app)
 
-# Load trained Random Forest model
+# Load model
 model = joblib.load("../models/random_forest.pkl")
 
-# EXACT 21 FEATURES USED DURING TRAINING (ORDER MATTERS)
 FEATURES = [
-    "pl_rade", "pl_masse", "pl_orbper", "pl_orbsmax",
-    "pl_eqt", "pl_insol", "pl_dens",
-    "st_teff", "st_mass", "st_rad", "st_lum",
-    "st_logg", "st_met", "st_age",
-    "sy_dist", "sy_vmag", "sy_kmag",
-    "pl_trandep", "pl_trandur",
-    "pl_ratror", "pl_imppar"
+"pl_rade","pl_masse","pl_orbper","pl_orbsmax",
+"pl_eqt","pl_insol","pl_dens",
+"st_teff","st_mass","st_rad","st_lum",
+"st_logg","st_met","st_age",
+"sy_dist","sy_vmag","sy_kmag",
+"pl_trandep","pl_trandur",
+"pl_ratror","pl_imppar"
 ]
 
-# -------------------------------
-# HOME ROUTE (TEST BACKEND)
-# -------------------------------
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({
-        "message": "ExoHabitAI Backend is running successfully"
-    })
+    return jsonify({"message":"Backend running"})
 
-
-# -------------------------------
-# PREDICT ROUTE
-# -------------------------------
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
 
-        # Validate input
-        is_valid, error = validate_input(data, FEATURES)
-        if not is_valid:
-            return jsonify({
-                "status": "error",
-                "message": error
-            }), 400
+        valid, error = validate_input(data, FEATURES)
+        if not valid:
+            return jsonify({"status":"error","message":error}),400
 
-        # Build feature vector in training order
-        feature_vector = [data[f] for f in FEATURES]
+        feature_vector = [float(data[f]) for f in FEATURES]
         X = np.array([feature_vector])
 
-        # Model prediction
-        prediction = model.predict(X)[0]
-        probability = model.predict_proba(X)[0][1]
+        prediction_raw = int(model.predict(X)[0])
+        probability = float(model.predict_proba(X)[0][1])
+
+        # Convert numeric prediction to label
+        if prediction_raw == 1:
+            label = "Habitable"
+        else:
+            label = "Not Habitable"
 
         return jsonify({
-            "status": "success",
-            "prediction": int(prediction),
-            "habitability_score": round(float(probability), 3)
+            "prediction": label,
+            "habitability_score": round(probability, 3)
         })
 
+
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+        return jsonify({"status":"error","message":str(e)}),500
 
-
-# -------------------------------
-# RUN SERVER
-# -------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
+
