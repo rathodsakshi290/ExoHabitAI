@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exoplanet Habitability Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Exo 2', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600&display=swap');
+
+    /* Main Layout */
+    .app-wrapper {
+      min-height: 100%;
+      width: 100%;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0d1b2a 100%);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .app-wrapper.scrollable {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
+    }
+
+    .app-wrapper.scrollable::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .app-wrapper.scrollable::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.5);
+      border-radius: 3px;
+    }
+
+    .relative {
+      position: relative;
+    }
+
+    .z-10 {
+      z-index: 10;
+    }
+
+    .p-container {
+      padding: 2rem 1rem;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 768px) {
+      .p-container {
+        padding: 2rem 1.5rem;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .p-container {
+        padding: 2rem 2rem;
+      }
+    }
+
+    /* Typography */
+    .title-font {
+      font-family: 'Orbitron', monospace;
+    }
+
+    /* Star Field Background */
+    .star-field {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Header */
+    .header-section {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .header-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .planet-icon {
+      width: 48px;
+      height: 48px;
+      color: #a78bfa;
+    }
+
+    .main-title {
+      font-size: 2rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #a78bfa, #ec4899, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+    }
+
+    @media (min-width: 768px) {
+      .main-title {
+        font-size: 2.25rem;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .main-title {
+        font-size: 3rem;
+      }
+    }
+
+    .header-description {
+      color: #9ca3af;
+      font-size: 1.125rem;
+      max-width: 768px;
+      margin: 0 auto;
+    }
+
+    /* Glass Card */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.25rem;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .metrics-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+
+    .metric-card {
+      background: linear-gradient(145deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+    }
+
+    .metric-value {
+      font-size: 1.875rem;
+      font-weight: bold;
+      font-family: 'Orbitron', monospace;
+      margin-bottom: 0.25rem;
+    }
+
+    .metric-value.cyan { color: #06b6d4; }
+    .metric-value.green { color: #10b981; }
+    .metric-value.red { color: #ef4444; }
+    .metric-value.purple { color: #a78bfa; }
+    .metric-value.yellow { color: #fbbf24; }
+
+    .metric-label {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+
+    .metric-sublabel {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #374151;
+    }
+
+    .tab-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      color: #d1d5db;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn.active {
+      background: rgba(139, 92, 246, 0.3);
+      border-bottom: 2px solid #8b5cf6;
+      color: #e5e7eb;
+    }
+
+    .tab-btn:hover {
+      color: #f3f4f6;
+    }
+
+    .download-btn {
+      margin-left: auto;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(10, 185, 129, 0.1)) !important;
+      border: 1px solid rgba(16, 185, 129, 0.4) !important;
+      color: #10b981 !important;
+      transition: all 0.3s ease;
+    }
+
+    .download-btn:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.2)) !important;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+      color: #34d399 !important;
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content:not(.hidden) {
+      display: block;
+    }
+
+    .tab-content.hidden {
+      display: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .chart-container {
+      position: relative;
+      height: 280px;
+    }
+
+    .chart-container.model-chart {
+      height: 220px;
+    }
+
+    /* Card Title */
+    .card-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      margin: 0 0 1rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Rankings Table */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    .rankings-table {
+      width: 100%;
+      font-size: 0.875rem;
+      border-collapse: collapse;
+    }
+
+    .rankings-table thead {
+      color: #9ca3af;
+      border-bottom: 1px solid #374151;
+    }
+
+    .rankings-table th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .rankings-table tbody tr {
+      border-bottom: 1px solid #374151;
+      transition: all 0.2s ease;
+    }
+
+    .rankings-table tbody tr:hover {
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .rankings-table td {
+      padding: 0.75rem 1rem;
+      color: #d1d5db;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 0.875rem;
+    }
+
+    .rank-badge.top {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .rank-badge.regular {
+      background: #374151;
+      color: #9ca3af;
+    }
+
+    .planet-name {
+      font-weight: 600;
+      color: white;
+    }
+
+    .score-high { color: #10b981; }
+    .score-medium { color: #fbbf24; }
+    .score-low { color: #ef4444; }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .status-habitable {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      animation: pulse-glow 2s infinite;
+    }
+
+    .status-marginal {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+      50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+    }
+
+    /* Prediction Grid */
+    .prediction-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .prediction-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Form */
+    .prediction-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #a78bfa;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      display: block;
+    }
+
+    .form-group input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+
+    .predict-btn {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      margin-top: 0.5rem;
+    }
+
+    .predict-btn:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);
+    }
+
+    .predict-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .predict-btn.download-pred {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.2));
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      margin-top: 1rem;
+    }
+
+    .predict-btn.download-pred:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.3));
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(139, 92, 246, 0.2);
+      border-top-color: #8b5cf6;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Results */
+    .results-placeholder {
+      text-align: center;
+      padding: 3rem 1rem;
+    }
+
+    .placeholder-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .results-placeholder p {
+      color: #9ca3af;
+    }
+
+    .results-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .results-badge-container {
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .result-badge {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      color: white;
+      font-weight: bold;
+      font-size: 1.125rem;
+    }
+
+    .result-badge.habitable {
+      background: linear-gradient(135deg, #10b981, #059669);
+      animation: pulse-glow 2s infinite;
+    }
+
+    .result-badge.non-habitable {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .results-score {
+      background: rgba(17, 24, 39, 0.5);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .score-label {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      margin-bottom: 0.5rem;
+    }
+
+    .score-value {
+      font-size: 3rem;
+      font-weight: bold;
+      font-family: 'Orbitron', monospace;
+      background: linear-gradient(to right, #a78bfa, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .score-bar-container {
+      margin-top: 0.75rem;
+      height: 12px;
+      background: #1f2937;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .score-bar {
+      height: 100%;
+      background: linear-gradient(to right, #ef4444, #fbbf24, #10b981);
+      transition: width 0.7s ease;
+      width: 0%;
+    }
+
+    .score-range {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .result-item {
+      background: rgba(17, 24, 39, 0.5);
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .result-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .result-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #a78bfa;
+      margin-top: 0.25rem;
+    }
+
+    .result-value.green { color: #10b981; }
+    .result-value.cyan { color: #06b6d4; }
+    .result-value.yellow { color: #fbbf24; }
+    .result-value.red { color: #ef4444; }
+
+    .key-factors-container {
+      background: rgba(17, 24, 39, 0.5);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .factors-label {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      margin-bottom: 0.75rem;
+    }
+
+    .key-factors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .factor-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.875rem;
+    }
+
+    .factor-name {
+      color: #9ca3af;
+    }
+
+    .factor-value-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .factor-value {
+      color: white;
+    }
+
+    .factor-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .factor-positive { background: #10b981; }
+    .factor-neutral { background: #fbbf24; }
+    .factor-negative { background: #ef4444; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+      color: white;
+      font-weight: bold;
+      max-width: 300px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+    .toast-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      border-top: 1px solid #374151;
+    }
+
+    .footer p {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .header-inner {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .planet-icon {
+        width: 36px;
+        height: 36px;
+      }
+
+      .main-title {
+        font-size: 1.5rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .download-btn {
+        margin-left: 0;
+        margin-top: 0.5rem;
+        width: 100%;
+      }
+
+      .tabs-container {
+        flex-direction: column;
+      }
+
+      .download-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-wrapper scrollable" id="app-wrapper">
+    <!-- Star Field Background -->
+    <div class="star-field" id="star-field"></div>
+    
+    <!-- Main Content -->
+    <div class="relative z-10 p-container" id="main-container">
+      
+      <!-- Header Section -->
+      <header class="header-section">
+        <div class="header-inner">
+          <svg class="planet-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2" fill="none"/>
+            <circle cx="32" cy="32" r="12" fill="url(#planetGrad)"/>
+            <ellipse cx="32" cy="32" rx="28" ry="8" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/>
+            <defs>
+              <linearGradient id="planetGrad" x1="20" y1="20" x2="44" y2="44">
+                <stop offset="0%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <h1 id="main-title" class="title-font main-title">
+            Exoplanet Habitability Predictor
+          </h1>
+        </div>
+        <p id="main-description" class="header-description">
+          Advanced ML-powered analysis system for predicting exoplanet habitability using planetary and stellar parameters. Explore 6,064+ exoplanets and discover potentially habitable worlds.
+        </p>
+      </header>
+      
+      <!-- Summary Metrics Cards -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value cyan" id="total-planets">6,064</div>
+          <div class="metric-label">Total Exoplanets</div>
+          <div class="metric-sublabel">Analyzed</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value green" id="habitable-count">26</div>
+          <div class="metric-label">Potentially Habitable</div>
+          <div class="metric-sublabel">Planets</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value red" id="non-habitable-count">6,038</div>
+          <div class="metric-label">Non-Habitable</div>
+          <div class="metric-sublabel">Planets</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value purple" id="avg-score">0.004</div>
+          <div class="metric-label">Average Habitability</div>
+          <div class="metric-sublabel">Score</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value yellow" id="best-model">XGBoost</div>
+          <div class="metric-label">Best Performing</div>
+          <div class="metric-sublabel">Model (96.8%)</div>
+        </div>
+      </section>
+      
+      <!-- Navigation Tabs -->
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="visualizations">📊 Visualizations</button>
+        <button class="tab-btn" data-tab="rankings">🏆 Top Candidates</button>
+        <button class="tab-btn" data-tab="predict">🔮 Prediction Panel</button>
+        <button id="download-csv-btn" class="tab-btn download-btn">📥 Download CSV</button>
+      </div>
+      
+      <!-- Tab Content: Visualizations -->
+      <div id="tab-visualizations" class="tab-content">
+        <div class="charts-grid">
+          
+          <!-- Habitability Score Distribution -->
+          <div class="glass-card">
+            <h3 class="card-title">📈 Habitability Score Distribution</h3>
+            <div class="chart-container">
+              <canvas id="distributionChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Feature Importance -->
+          <div class="glass-card">
+            <h3 class="card-title">🎯 Feature Importance</h3>
+            <div class="chart-container">
+              <canvas id="importanceChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Temperature vs Habitability -->
+          <div class="glass-card">
+            <h3 class="card-title">🌡️ Temperature vs Habitability</h3>
+            <div class="chart-container">
+              <canvas id="scatterChart1"></canvas>
+            </div>
+          </div>
+          
+          <!-- Stellar Flux Correlation -->
+          <div class="glass-card">
+            <h3 class="card-title">☀️ Stellar Flux vs Habitability</h3>
+            <div class="chart-container">
+              <canvas id="scatterChart2"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Model Comparison Chart -->
+        <div class="glass-card">
+          <h3 class="card-title">🤖 ML Model Performance Comparison</h3>
+          <div class="chart-container model-chart">
+            <canvas id="modelChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tab Content: Rankings -->
+      <div id="tab-rankings" class="tab-content hidden">
+        <div class="glass-card">
+          <h3 class="card-title">🏆 Top Exoplanet Candidates by Habitability Score</h3>
+          <div class="table-wrapper">
+            <table class="rankings-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Planet Name</th>
+                  <th>Score</th>
+                  <th>Eq. Temp (K)</th>
+                  <th>Radius (R⊕)</th>
+                  <th>Orbital Period</th>
+                  <th>Stellar Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rankings-table">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tab Content: Prediction Panel -->
+      <div id="tab-predict" class="tab-content hidden">
+        <div class="prediction-grid">
+          
+          <!-- Input Form -->
+          <div class="glass-card">
+            <h3 class="card-title">🔮 Prediction Input Panel</h3>
+            
+            <form id="prediction-form" class="prediction-form">
+              <!-- Planetary Parameters -->
+              <div class="form-section">
+                <h4 class="section-title">🪐 Planetary Parameters</h4>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="planet-radius">Planet Radius (R⊕)</label>
+                    <input type="number" id="planet-radius" step="0.01" min="0.1" max="25" value="1.2" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="planet-mass">Planet Mass (M⊕)</label>
+                    <input type="number" id="planet-mass" step="0.01" min="0.01" max="500" value="1.5" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="orbital-period">Orbital Period (days)</label>
+                    <input type="number" id="orbital-period" step="0.1" min="0.1" max="10000" value="365" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="eq-temp">Equilibrium Temp (K)</label>
+                    <input type="number" id="eq-temp" step="1" min="50" max="3000" value="288" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="semi-major-axis">Semi-major Axis (AU)</label>
+                    <input type="number" id="semi-major-axis" step="0.001" min="0.001" max="100" value="1.0" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="eccentricity">Eccentricity</label>
+                    <input type="number" id="eccentricity" step="0.01" min="0" max="1" value="0.02" required>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Stellar Parameters -->
+              <div class="form-section">
+                <h4 class="section-title">⭐ Stellar Parameters</h4>
+                <div class="form-grid">
+                  <label for="star-type">Star Type</label>
+                    <select id="star-type">
+                      <option value="G">G</option>
+                      <option value="K">K</option>
+                      <option value="M">M</option>
+                      <option value="F">F</option>
+                      <option value="A">A</option>
+                    </select>
+                </div>
+
+                  <div class="form-group">
+                    <label for="stellar-mass">Stellar Mass (M☉)</label>
+                    <input type="number" id="stellar-mass" step="0.01" min="0.08" max="50" value="1.0" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="stellar-radius">Stellar Radius (R☉)</label>
+                    <input type="number" id="stellar-radius" step="0.01" min="0.08" max="100" value="1.0" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="stellar-temp">Stellar Temp (K)</label>
+                    <input type="number" id="stellar-temp" step="1" min="2000" max="50000" value="5778" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="stellar-flux">Stellar Flux (S⊕)</label>
+                    <input type="number" id="stellar-flux" step="0.01" min="0.01" max="10000" value="1.0" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="stellar-metallicity">Metallicity [Fe/H]</label>
+                    <input type="number" id="stellar-metallicity" step="0.01" min="-3" max="1" value="0.0" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="stellar-age">Stellar Age (Gyr)</label>
+                    <input type="number" id="stellar-age" step="0.1" min="0.1" max="15" value="4.6" required>
+                  </div>
+                </div>
+              </div>
+              
+              <button type="submit" class="predict-btn">
+                <span id="btn-text">🚀 Predict Habitability</span>
+                <div id="btn-spinner" class="loading-spinner hidden"></div>
+              </button>
+            </form>
+          </div>
+          
+          <!-- Results Panel -->
+          <div class="glass-card">
+            <h3 class="card-title">📋 Prediction Results</h3>
+            
+            <div id="results-placeholder" class="results-placeholder">
+              <div class="placeholder-icon">🔭</div>
+              <p>Enter planetary and stellar parameters to predict habitability</p>
+            </div>
+            
+            <div id="results-panel" class="results-panel hidden">
+              <!-- Status Badge -->
+              <div class="results-badge-container">
+                <div id="result-badge" class="result-badge"></div>
+              </div>
+              
+              <!-- Score Display -->
+              <div class="results-score">
+                <div class="score-label">Habitability Score</div>
+                <div id="result-score" class="score-value">0.00</div>
+                <div class="score-bar-container">
+                  <div id="score-bar" class="score-bar"></div>
+                </div>
+                <div class="score-range">
+                  <span>Non-Habitable</span>
+                  <span>Habitable</span>
+                </div>
+              </div>
+              
+              <!-- Detailed Results -->
+              <div class="results-grid">
+                <div class="result-item">
+                  <div class="result-label">Model Used</div>
+                  <div id="result-model" class="result-value">XGBoost</div>
+                </div>
+                <div class="result-item">
+                  <div class="result-label">Confidence</div>
+                  <div id="result-confidence" class="result-value">95.2%</div>
+                </div>
+                <div class="result-item">
+                  <div class="result-label">HZ Position</div>
+                  <div id="result-hz" class="result-value">Within HZ</div>
+                </div>
+                <div class="result-item">
+                  <div class="result-label">ESI Score</div>
+                  <div id="result-esi" class="result-value">0.87</div>
+                </div>
+              </div>
+              
+              <!-- Key Factors -->
+              <div class="key-factors-container">
+                <div class="factors-label">Key Contributing Factors</div>
+                <div id="key-factors" class="key-factors-list"></div>
+              </div>
+
+              <!-- Download Prediction Button -->
+              <button type="button" id="download-prediction-btn" class="predict-btn download-pred">
+                📥 Download Prediction as CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <footer class="footer">
+        <p>🌌 Powered by Machine Learning • Data from NASA Exoplanet Archive • 6,064 Exoplanets Analyzed</p>
+      </footer>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+  </div>
+
+  <script>
+    // Configuration
+    const defaultConfig = {
+      project_title: 'Exoplanet Habitability Predictor',
+      project_description: 'Advanced ML-powered analysis system for predicting exoplanet habitability.'
+    };
+
+    let config = { ...defaultConfig };
+    let charts = {};
+    let lastPredictionData = null;
+
+    const API_BASE = "http://localhost:5000";
+
+
+    // Extended Exoplanet Data with all parameters
+    const exoplanetData = [
+      { name: 'Kepler-442b', score: 0.94, temp: 233, radius: 1.34, period: 112.3, stellar: 'K', status: 'habitable', mass: 1.2, semiMajor: 0.41, ecc: 0.04, stellarMass: 0.61, stellarRadius: 0.61, stellarTemp: 4539, stellarFlux: 0.67, metallicity: -0.12, age: 6.5 },
+      { name: 'Kepler-452b', score: 0.91, temp: 265, radius: 1.63, period: 384.8, stellar: 'G', status: 'habitable', mass: 5.0, semiMajor: 1.05, ecc: 0.00, stellarMass: 1.04, stellarRadius: 1.11, stellarTemp: 5757, stellarFlux: 0.89, metallicity: 0.00, age: 6.0 },
+      { name: 'Proxima Centauri b', score: 0.89, temp: 234, radius: 1.08, period: 11.2, stellar: 'M', status: 'habitable', mass: 1.27, semiMajor: 0.0485, ecc: 0.11, stellarMass: 0.12, stellarRadius: 0.14, stellarTemp: 3042, stellarFlux: 0.65, metallicity: -0.04, age: 4.85 },
+      { name: 'TRAPPIST-1e', score: 0.87, temp: 230, radius: 0.92, period: 6.1, stellar: 'M', status: 'habitable', mass: 0.62, semiMajor: 0.02925, ecc: 0.005, stellarMass: 0.089, stellarRadius: 0.117, stellarTemp: 2566, stellarFlux: 0.46, metallicity: -0.23, age: 7.6 },
+      { name: 'Kepler-186f', score: 0.85, temp: 188, radius: 1.17, period: 129.9, stellar: 'M', status: 'habitable', mass: 1.64, semiMajor: 0.36, ecc: 0.15, stellarMass: 0.477, stellarRadius: 0.473, stellarTemp: 3788, stellarFlux: 0.35, metallicity: -0.27, age: 8.0 },
+      { name: 'LHS 1140 b', score: 0.82, temp: 230, radius: 1.43, period: 24.7, stellar: 'M', status: 'habitable', mass: 6.82, semiMajor: 0.1565, ecc: 0.00, stellarMass: 0.13, stellarRadius: 0.20, stellarTemp: 2994, stellarFlux: 0.54, metallicity: -0.31, age: 4.5 },
+      { name: 'K2-18b', score: 0.79, temp: 284, radius: 2.71, period: 32.9, stellar: 'M', status: 'habitable', mass: 8.63, semiMajor: 0.1454, ecc: 0.005, stellarMass: 0.273, stellarRadius: 0.355, stellarTemp: 3573, stellarFlux: 0.93, metallicity: 0.08, age: 5.2 },
+      { name: 'TOI-700 d', score: 0.76, temp: 269, radius: 1.19, period: 37.4, stellar: 'M', status: 'habitable', mass: 2.63, semiMajor: 0.1654, ecc: 0.006, stellarMass: 0.397, stellarRadius: 0.456, stellarTemp: 3799, stellarFlux: 0.67, metallicity: -0.14, age: 5.1 },
+      { name: 'Kepler-62f', score: 0.74, temp: 208, radius: 1.41, period: 267.3, stellar: 'K', status: 'habitable', mass: 2.8, semiMajor: 0.718, ecc: 0.0, stellarMass: 0.69, stellarRadius: 0.64, stellarTemp: 4925, stellarFlux: 0.40, metallicity: -0.07, age: 7.0 },
+      { name: 'Kepler-1649c', score: 0.71, temp: 234, radius: 1.06, period: 19.5, stellar: 'M', status: 'habitable', mass: 1.11, semiMajor: 0.1054, ecc: 0.0, stellarMass: 0.265, stellarRadius: 0.258, stellarTemp: 3616, stellarFlux: 0.55, metallicity: -0.35, age: 5.5 },
+      { name: 'Kepler-22b', score: 0.62, temp: 262, radius: 2.38, period: 289.9, stellar: 'G', status: 'marginal', mass: 13.1, semiMajor: 0.849, ecc: 0.0, stellarMass: 1.1, stellarRadius: 1.188, stellarTemp: 5757, stellarFlux: 0.88, metallicity: -0.08, age: 7.0 },
+      { name: 'Kepler-69c', score: 0.58, temp: 299, radius: 1.71, period: 242.5, stellar: 'G', status: 'marginal', mass: 4.39, semiMajor: 0.934, ecc: 0.0, stellarMass: 1.119, stellarRadius: 1.155, stellarTemp: 5757, stellarFlux: 1.08, metallicity: 0.03, age: 6.5 },
+      { name: 'HD 40307 g', score: 0.54, temp: 295, radius: 2.40, period: 197.8, stellar: 'K', status: 'marginal', mass: 7.1, semiMajor: 0.6, ecc: 0.0, stellarMass: 0.75, stellarRadius: 0.755, stellarTemp: 5018, stellarFlux: 1.15, metallicity: 0.15, age: 9.0 },
+      { name: 'Gliese 667 Cc', score: 0.51, temp: 277, radius: 1.54, period: 28.1, stellar: 'M', status: 'marginal', mass: 3.67, semiMajor: 0.1251, ecc: 0.006, stellarMass: 0.326, stellarRadius: 0.337, stellarTemp: 3720, stellarFlux: 0.93, metallicity: 0.02, age: 5.0 },
+      { name: 'Kepler-283c', score: 0.48, temp: 248, radius: 1.82, period: 92.7, stellar: 'K', status: 'marginal', mass: 4.99, semiMajor: 0.376, ecc: 0.0, stellarMass: 0.85, stellarRadius: 0.81, stellarTemp: 5126, stellarFlux: 0.78, metallicity: -0.12, age: 6.3 }
+    ];
+
+    // Create star field background
+    function createStarField() {
+      const starField = document.getElementById('star-field');
+      for (let i = 0; i < 100; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.width = Math.random() * 3 + 1 + 'px';
+        star.style.height = star.style.width;
+        star.style.animationDelay = Math.random() * 3 + 's';
+        starField.appendChild(star);
+      }
+    }
+
+    // Download CSV function for exoplanet data
+    function downloadHabitabilityData() {
+      const headers = ['Planet Name', 'Habitability Score', 'Status', 'Equilibrium Temperature (K)', 'Planet Radius (R⊕)', 'Planet Mass (M⊕)', 'Orbital Period (days)', 'Semi-Major Axis (AU)', 'Eccentricity', 'Stellar Type', 'Stellar Mass (M☉)', 'Stellar Radius (R☉)', 'Stellar Temperature (K)', 'Stellar Flux (S⊕)', 'Stellar Metallicity [Fe/H]', 'Stellar Age (Gyr)'];
+      
+      let csvContent = headers.join(',') + '\n';
+      
+      exoplanetData.forEach(planet => {
+        const row = [
+          `"${planet.name}"`,
+          planet.score.toFixed(2),
+          planet.status.toUpperCase(),
+          planet.temp,
+          planet.radius.toFixed(2),
+          planet.mass.toFixed(2),
+          planet.period.toFixed(1),
+          planet.semiMajor.toFixed(4),
+          planet.ecc.toFixed(3),
+          planet.stellar,
+          planet.stellarMass.toFixed(3),
+          planet.stellarRadius.toFixed(3),
+          planet.stellarTemp,
+          planet.stellarFlux.toFixed(2),
+          planet.metallicity.toFixed(2),
+          planet.age.toFixed(1)
+        ];
+        csvContent += row.join(',') + '\n';
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Exohabit_ml_output_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('CSV file downloaded successfully! 📥', 'success');
+    }
+
+    // Download Prediction Results as CSV
+    function downloadPredictionResults() {
+      if (!lastPredictionData) {
+        showToast('No prediction data to download. Please make a prediction first.', 'error');
+        return;
+      }
+
+      const headers = ['Parameter', 'Value', 'Unit'];
+      let csvContent = headers.join(',') + '\n';
+
+      const data = lastPredictionData;
+
+      const parameters = [
+        ['Analysis Timestamp', new Date().toISOString(), ''],
+        ['Habitability Status', data.status, ''],
+        ['Habitability Score', data.score.toFixed(2), ''],
+        ['Confidence Level', data.confidence + '%', ''],
+        ['ESI Score', data.esi, ''],
+        ['Habitable Zone Position', data.hzPosition, ''],
+        ['', '', ''],
+        ['PLANETARY PARAMETERS', '', ''],
+        ['Planet Radius', data.planetRadius.toFixed(2), 'R⊕'],
+        ['Planet Mass', data.planetMass.toFixed(2), 'M⊕'],
+        ['Orbital Period', data.orbitalPeriod.toFixed(1), 'days'],
+        ['Equilibrium Temperature', data.eqTemp, 'K'],
+        ['Semi-Major Axis', data.semiMajorAxis.toFixed(4), 'AU'],
+        ['Eccentricity', data.eccentricity.toFixed(3), ''],
+        ['', '', ''],
+        ['STELLAR PARAMETERS', '', ''],
+        ['Stellar Mass', data.stellarMass.toFixed(3), 'M☉'],
+        ['Stellar Radius', data.stellarRadius.toFixed(3), 'R☉'],
+        ['Stellar Temperature', data.stellarTemp, 'K'],
+        ['Stellar Flux', data.stellarFlux.toFixed(2), 'S⊕'],
+        ['Stellar Metallicity', data.stellarMetallicity.toFixed(2), '[Fe/H]'],
+        ['Stellar Age', data.stellarAge.toFixed(1), 'Gyr'],
+        ['', '', ''],
+        ['KEY FACTORS', '', ''],
+        ...data.factors.map(f => [f.name, f.value, f.impact])
+      ];
+
+      parameters.forEach(row => {
+        const escapedRow = row.map(cell => 
+          typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
+        );
+        csvContent += escapedRow.join(',') + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `exoplanet_prediction_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast('Prediction results downloaded successfully! 📥', 'success');
+    }
+
+    // Initialize Charts
+    function initializeCharts() {
+      const distCtx = document.getElementById('distributionChart').getContext('2d');
+      charts.distribution = new Chart(distCtx, {
+        type: 'bar',
+        data: {
+          labels: ['0-0.2', '0.2-0.4', '0.4-0.6', '0.6-0.8', '0.8-1.0'],
+          datasets: [{
+            label: 'Number of Planets',
+            data: [2156, 1823, 1276, 687, 305],
+            backgroundColor: [
+              'rgba(239, 68, 68, 0.7)',
+              'rgba(249, 115, 22, 0.7)',
+              'rgba(234, 179, 8, 0.7)',
+              'rgba(34, 197, 94, 0.7)',
+              'rgba(16, 185, 129, 0.7)'
+            ],
+            borderColor: [
+              'rgb(239, 68, 68)',
+              'rgb(249, 115, 22)',
+              'rgb(234, 179, 8)',
+              'rgb(34, 197, 94)',
+              'rgb(16, 185, 129)'
+            ],
+            borderWidth: 2,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#9ca3af' }
+            }
+          }
+        }
+      });
+
+      const impCtx = document.getElementById('importanceChart').getContext('2d');
+      charts.importance = new Chart(impCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Eq. Temp', 'Stellar Flux', 'Planet Radius', 'Orbital Period', 'Stellar Type', 'Eccentricity', 'Semi-Major Axis', 'Stellar Metallicity'],
+          datasets: [{
+            label: 'Importance',
+            data: [0.28, 0.22, 0.15, 0.12, 0.09, 0.06, 0.05, 0.03],
+            backgroundColor: 'rgba(139, 92, 246, 0.7)',
+            borderColor: 'rgb(139, 92, 246)',
+            borderWidth: 2,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 0.35,
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#9ca3af', font: { size: 10 } }
+            }
+          }
+        }
+      });
+
+      const scatter1Ctx = document.getElementById('scatterChart1').getContext('2d');
+      const tempData = [];
+      for (let i = 0; i < 80; i++) {
+        const temp = 150 + Math.random() * 350;
+        let score = 0;
+        if (temp >= 200 && temp <= 320) {
+          score = 0.5 + Math.random() * 0.5 - Math.abs(temp - 260) / 300;
+        } else {
+          score = Math.random() * 0.4;
+        }
+        tempData.push({ x: temp, y: Math.max(0, Math.min(1, score)) });
+      }
+      charts.scatter1 = new Chart(scatter1Ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Planets',
+            data: tempData,
+            backgroundColor: tempData.map(d => d.y > 0.5 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
+            borderColor: tempData.map(d => d.y > 0.5 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)'),
+            borderWidth: 1,
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Equilibrium Temperature (K)', color: '#9ca3af' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            },
+            y: {
+              title: { display: true, text: 'Habitability Score', color: '#9ca3af' },
+              beginAtZero: true,
+              max: 1,
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            }
+          }
+        }
+      });
+
+      const scatter2Ctx = document.getElementById('scatterChart2').getContext('2d');
+      const fluxData = [];
+      for (let i = 0; i < 80; i++) {
+        const flux = 0.1 + Math.random() * 4;
+        let score = 0;
+        if (flux >= 0.3 && flux <= 1.8) {
+          score = 0.5 + Math.random() * 0.5 - Math.abs(flux - 1) / 2;
+        } else {
+          score = Math.random() * 0.35;
+        }
+        fluxData.push({ x: flux, y: Math.max(0, Math.min(1, score)) });
+      }
+      charts.scatter2 = new Chart(scatter2Ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Planets',
+            data: fluxData,
+            backgroundColor: fluxData.map(d => d.y > 0.5 ? 'rgba(234, 179, 8, 0.6)' : 'rgba(107, 114, 128, 0.6)'),
+            borderColor: fluxData.map(d => d.y > 0.5 ? 'rgb(234, 179, 8)' : 'rgb(107, 114, 128)'),
+            borderWidth: 1,
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Stellar Flux (S⊕)', color: '#9ca3af' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            },
+            y: {
+              title: { display: true, text: 'Habitability Score', color: '#9ca3af' },
+              beginAtZero: true,
+              max: 1,
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af' }
+            }
+          }
+        }
+      });
+
+      const modelCtx = document.getElementById('modelChart').getContext('2d');
+      charts.model = new Chart(modelCtx, {
+        type: 'bar',
+        data: {
+          labels: ['XGBoost', 'Random Forest', 'Logistic Regression', 'Decision Tree'],
+          datasets: [
+            {
+              label: 'Accuracy',
+              data: [96.8, 95.2, 87.5, 84.2],
+              backgroundColor: 'rgba(139, 92, 246, 0.7)',
+              borderColor: 'rgb(139, 92, 246)',
+              borderWidth: 2,
+              borderRadius: 4
+            },
+            {
+              label: 'F1-Score',
+              data: [95.4, 93.8, 85.1, 82.0],
+              backgroundColor: 'rgba(6, 182, 212, 0.7)',
+              borderColor: 'rgb(6, 182, 212)',
+              borderWidth: 2,
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#9ca3af' }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#9ca3af', callback: v => v + '%' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#9ca3af' }
+            }
+          }
+        }
+      });
+    }
+
+    // Populate Rankings Table
+    function populateRankings() {
+      const tbody = document.getElementById('rankings-table');
+      tbody.innerHTML = exoplanetData.map((planet, i) => `
+        <tr>
+          <td>
+            <span class="rank-badge ${i < 3 ? 'top' : 'regular'}">
+              ${i + 1}
+            </span>
+          </td>
+          <td class="planet-name">${planet.name}</td>
+          <td>
+            <span class="score-${planet.score >= 0.7 ? 'high' : planet.score >= 0.5 ? 'medium' : 'low'}">
+              ${planet.score.toFixed(2)}
+            </span>
+          </td>
+          <td>${planet.temp} K</td>
+          <td>${planet.radius} R⊕</td>
+          <td>${planet.period} days</td>
+          <td>
+            <span class="status-badge" style="background: ${planet.stellar === 'G' ? 'rgba(251, 191, 36, 0.2)' : planet.stellar === 'K' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; color: ${planet.stellar === 'G' ? '#fbbf24' : planet.stellar === 'K' ? '#f97316' : '#ef4444'};">
+              ${planet.stellar}-type
+            </span>
+          </td>
+          <td>
+            <span class="status-badge ${planet.status === 'habitable' ? 'status-habitable' : 'status-marginal'}">
+              ${planet.status === 'habitable' ? '✓ Habitable' : '~ Marginal'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Tab Navigation
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          if (tab.dataset.tab) {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            const tabId = 'tab-' + tab.dataset.tab;
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+              targetTab.classList.remove('hidden');
+            }
+            
+            if (tab.dataset.tab === 'visualizations') {
+              setTimeout(() => {
+                Object.values(charts).forEach(chart => {
+                  if (chart && chart.resize) chart.resize();
+                });
+              }, 100);
+            }
+          }
+        });
+      });
+    }
+
+    // Show Toast
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    // Prediction Form Handler
+    function setupPredictionForm() {
+      const form = document.getElementById('prediction-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const placeholder = document.getElementById('results-placeholder');
+        const resultsPanel = document.getElementById('results-panel');
+        const predictBtn = document.querySelector('.predict-btn');
+        
+        btnText.textContent = 'Analyzing...';
+        btnSpinner.classList.remove('hidden');
+        predictBtn.disabled = true;
+        
+        const inputs = {
+          planetRadius: parseFloat(document.getElementById('planet-radius').value),
+          planetMass: parseFloat(document.getElementById('planet-mass').value),
+          orbitalPeriod: parseFloat(document.getElementById('orbital-period').value),
+          eqTemp: parseFloat(document.getElementById('eq-temp').value),
+          semiMajorAxis: parseFloat(document.getElementById('semi-major-axis').value),
+          eccentricity: parseFloat(document.getElementById('eccentricity').value),
+          stellarMass: parseFloat(document.getElementById('stellar-mass').value),
+          stellarRadius: parseFloat(document.getElementById('stellar-radius').value),
+          stellarTemp: parseFloat(document.getElementById('stellar-temp').value),
+          stellarFlux: parseFloat(document.getElementById('stellar-flux').value),
+          stellarMetallicity: parseFloat(document.getElementById('stellar-metallicity').value),
+          stellarAge: parseFloat(document.getElementById('stellar-age').value)
+        };
+        
+        for (const [key, value] of Object.entries(inputs)) {
+          if (isNaN(value)) {
+            showToast(`Invalid input for ${key}`, 'error');
+            btnText.textContent = '🚀 Predict Habitability';
+            btnSpinner.classList.add('hidden');
+            predictBtn.disabled = false;
+            return;
+          }
+        }
+
+        let isHabitable = false;
+        let score = 0;
+        let confidence = 0;
+
+        
+       try {
+    const response = await fetch(`${API_BASE}/predict`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            pl_rade: inputs.planetRadius,
+            pl_bmasse: inputs.planetMass,
+            pl_orbper: inputs.orbitalPeriod,
+            pl_orbsmax: inputs.semiMajorAxis,
+            pl_eqt: inputs.eqTemp,
+            st_teff: inputs.stellarTemp,
+            st_lum: inputs.stellarFlux,
+            st_met: inputs.stellarMetallicity,
+            pl_insol: inputs.stellarFlux,
+            star_type: document.getElementById("star-type").value
+        })
+    });
+
+    const result = await response.json();
+
+    if (result.status === "error") {
+        showToast(result.message, "error");
+        return;
+    }
+
+    confidence = result.result.confidence_score;
+    isHabitable = result.result.prediction === "Habitable";
+    score = confidence;
+
+
+    const badge = document.getElementById('result-badge');
+    badge.textContent = isHabitable ? '✓ Potentially Habitable' : '✗ Non-Habitable';
+    badge.className = `result-badge ${isHabitable ? 'habitable' : 'non-habitable'}`;
+
+    document.getElementById('result-score').textContent = score.toFixed(2);
+    document.getElementById('score-bar').style.width = (score * 100) + '%';
+    document.getElementById('result-confidence').textContent = (score * 100).toFixed(2) + "%";
+
+} catch (error) {
+    showToast("Backend connection failed!", "error");
+}
+
+        
+        // Store prediction data for download
+        lastPredictionData = {
+          status: isHabitable ? 'Potentially Habitable' : 'Non-Habitable',
+          score: score,
+          confidence: (confidence * 100).toFixed(2),
+          planetRadius: inputs.planetRadius,
+          planetMass: inputs.planetMass,
+          orbitalPeriod: inputs.orbitalPeriod,
+          eqTemp: inputs.eqTemp,
+          semiMajorAxis: inputs.semiMajorAxis,
+          eccentricity: inputs.eccentricity,
+          stellarMass: inputs.stellarMass,
+          stellarRadius: inputs.stellarRadius,
+          stellarTemp: inputs.stellarTemp,
+          stellarFlux: inputs.stellarFlux,
+          stellarMetallicity: inputs.stellarMetallicity,
+          stellarAge: inputs.stellarAge,
+          factors: []
+        };
+
+        
+        placeholder.classList.add('hidden');
+        resultsPanel.classList.remove('hidden');
+        
+        btnText.textContent = '🚀 Predict Habitability';
+        btnSpinner.classList.add('hidden');
+        predictBtn.disabled = false;
+        
+        showToast('Prediction completed successfully!', 'success');
+      });
+
+      // Download Prediction Button
+      const downloadPredBtn = document.getElementById('download-prediction-btn');
+      downloadPredBtn.addEventListener('click', downloadPredictionResults);
+    }
+
+    async function loadMetrics() {
+    try {
+        const response = await fetch(`${API_BASE}/metrics`);
+        const data = await response.json();
+
+        document.getElementById("total-planets").textContent = data.total_exoplanets;
+        document.getElementById("habitable-count").textContent = data.habitable_planets;
+        document.getElementById("non-habitable-count").textContent = data.non_habitable_planets;
+        document.getElementById("avg-score").textContent = data.average_habitability_score;
+        document.getElementById("best-model").textContent = data.best_model;
+
+    } catch (error) {
+        console.error("Metrics load failed", error);
+    }
+}
+
+
+    // Initialize everything on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      createStarField();
+      initializeCharts();
+      populateRankings();
+      setupTabs();
+      setupPredictionForm();
+
+      loadMetrics();   // 👈 ADD THIS LINE
+      
+      const downloadBtn = document.getElementById('download-csv-btn');
+      downloadBtn.addEventListener('click', downloadHabitabilityData);
+    });
+  </script>
+</body>
+</html>
