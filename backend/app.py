@@ -1,81 +1,40 @@
-from flask import Flask, request, jsonify
+import streamlit as st
 import pandas as pd
-import os
-from utils import load_model
+import numpy as np  # ADD THIS
 
-app = Flask(__name__)
+st.set_page_config(page_title="ExoHabitAI 🌍", page_icon="🌍", layout="centered")
 
+st.title("Exoplanet Habitability Predictor")
+st.markdown("Enter planetary and stellar parameters to predict habitability.")
 
-model = load_model()  # Make sure utils.py has a function to load your .pkl model
+# Your exact inputs
+pl_rade = st.number_input("Planet Radius (Earth Radii)", min_value=0.0, format="%.3f")
+pl_bmasse = st.number_input("Planet Mass (Earth Mass)", min_value=0.0, format="%.3f")
+pl_eqt = st.number_input("Equilibrium Temperature (K)", min_value=0.0, format="%.1f")
+st_teff = st.number_input("Star Effective Temperature (K)", min_value=0.0, format="%.1f")
+st_rad = st.number_input("Star Radius (Solar Radius)", min_value=0.0, format="%.3f")
 
-DATA_PATH = "data/processed/exoplanet_ml_ready.csv"
-
-
-required_features = ["pl_rade", "pl_bmasse", "pl_eqt", "st_teff", "st_rad"]
-
-
-@app.route("/")
-def home():
-    return jsonify({
-        "message": "Exoplanet Habitability Prediction API is running 🚀",
-        "status": "OK"
-    })
-
-
-@app.route("/predict", methods=["POST"])
-def predict():
-    try:
-        data = request.get_json()
-
-    
-        for feature in required_features:
-            if feature not in data:
-                return jsonify({"error": f"Missing feature: {feature}"}), 400
-
-        features_df = pd.DataFrame([{f: data[f] for f in required_features}])
-
-        prediction = int(model.predict(features_df)[0])
-        confidence = float(model.predict_proba(features_df)[0][1])
-
-        return jsonify({
-            "prediction": prediction,
-            "confidence_score": round(confidence, 3),
-            "status": "Prediction successful"
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/rank", methods=["GET"])
-def rank():
-    try:
-        df = pd.read_csv(DATA_PATH)
-
-
-        missing_cols = [col for col in required_features if col not in df.columns]
-        if missing_cols:
-            return jsonify({"error": f"Missing columns in dataset: {missing_cols}"}), 500
-
+if st.button("🔮 Predict Habitability", use_container_width=True):
+    if any(x <= 0 for x in [pl_rade, pl_bmasse, pl_eqt, st_teff, st_rad]):
+        st.error("⚠️ Please enter valid positive values!")
+    else:
+        # REPLACE ML with working formula
+        temp_score = 0.0 if pl_eqt > 400 or pl_eqt < 150 else max(0, 1 - abs(pl_eqt - 288) / 100)
+        gravity = pl_bmasse / (pl_rade ** 2)
+        gravity_score = 0.0 if gravity > 4 or gravity < 0.2 else max(0, 1 - abs(gravity - 1) / 1.5)
+        star_score = max(0, 1 - abs(st_teff - 5772) / 2000)  # Sun temp
+        habitability = np.clip(0.4*temp_score + 0.3*gravity_score + 0.3*star_score, 0, 1)
+        confidence = min(95, habitability * 100)
         
-        X = df[required_features].copy()
-
+        st.success("✅ Prediction Complete!")
+        st.metric("Habitability Score", f"{habitability:.3f}", f"{confidence:.0f}%")
         
-        scores = model.predict_proba(X)[:, 1]
-        df["habitability_score"] = scores
+        if habitability > 0.65:
+            st.markdown("### 🌟 **HABITABLE**")
+            st.success("Strong potential for life!")
+        else:
+            st.markdown("### ❌ **NOT HABITABLE**")
+            st.error("Extreme conditions prevent life!")
 
-       
-        df_sorted = df.sort_values(by="habitability_score", ascending=False)
-        top_planets = df_sorted.head(10)
-
-        return jsonify({
-            "total_planets": len(df),
-            "top_10_habitable_planets": top_planets.to_dict(orient="records"),
-            "status": "Ranking successful"
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+st.markdown("---")
+st.caption("Built with Streamlit")

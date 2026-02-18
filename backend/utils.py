@@ -1,7 +1,7 @@
+# utils.py
 import joblib
-
-MODEL_PATH = "models/habitability_model.pkl"
+import os
 
 def load_model():
-    model = joblib.load(MODEL_PATH)
-    return model
+    model_path = os.path.join("models", "habitability_model.pkl")
+    return joblib.load(model_path)

@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
-print("🚀 Module 2: Data Cleaning & Preprocessing started")
-
+# preprocessing.py
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import os
 
 INPUT_PATH = "data/exoplanet_data_cleaned.csv"
-OUTPUT_PATH = "data/exoplanet_ml_ready.csv"
+OUTPUT_PATH = "data/processed/exoplanet_ml_ready.csv"
 
 FEATURES = [
     "pl_rade",
@@ -20,25 +18,26 @@ FEATURES = [
     "st_lum"
 ]
 
-print("📂 Loading cleaned dataset...")
+# Load dataset
 df = pd.read_csv(INPUT_PATH)
-print("✅ Dataset loaded:", df.shape)
 
-FEATURES = [f for f in FEATURES if f in df.columns]
-print("🎯 Selected features:", FEATURES)
+# Keep original values
+for col in FEATURES:
+    if col in df.columns:
+        df[f"{col}_original"] = df[col]
 
-df = df[FEATURES]
+# Select numeric features for ML
+numeric_features = [f for f in FEATURES if f in df.columns]
 
-print("🧹 Filling missing values with median...")
-df = df.fillna(df.median())
+# Fill missing values
+df[numeric_features] = df[numeric_features].fillna(df[numeric_features].median())
 
-print("📏 Scaling features...")
+# Scale features
 scaler = StandardScaler()
-df_scaled = scaler.fit_transform(df)
+df_scaled = scaler.fit_transform(df[numeric_features])
+df[numeric_features] = df_scaled
 
-pd.DataFrame(df_scaled, columns=FEATURES).to_csv(
-    OUTPUT_PATH, index=False
-)
-
-print("💾 ML-ready dataset saved to:", OUTPUT_PATH)
-print(" COMPLETED successfully!")
+# Save ML-ready dataset
+os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+df.to_csv(OUTPUT_PATH, index=False)
+print("✅ ML-ready dataset saved with original columns:", OUTPUT_PATH)
