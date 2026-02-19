@@ -57,7 +57,8 @@ const Predict = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/predict", {
+      const apiBase = import.meta.env.VITE_API_URL || "https://exohabitai-7335.onrender.com";
+      const res = await fetch(`${apiBase}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -69,7 +70,7 @@ const Predict = () => {
         habitability_score: data.habitability_score,
       });
     } catch {
-      setError("Unable to connect. Make sure the backend is running: python backend/app.py");
+      setError("Unable to connect to prediction server. Please try again.");
     } finally {
       setLoading(false);
     }
