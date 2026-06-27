@@ -133,3 +133,6 @@ B.Tech in Artificial Intelligence
 
 AI & Data Analytics Enthusiast
 
+## 🌐 Live Demo
+
+🔗 **Application:** [https://exohabitai-frontend-nu.vercel.app]
